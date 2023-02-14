@@ -1,0 +1,23 @@
+spring:
+  application:
+    name: go-demand-service
+
+  profiles:
+    active: development-local
+  datasource:
+    demand:
+      url: "root:root@tcp(127.0.0.1:3306)/go_test?charset=utf8&loc=Local&parseTime=true"
+      maxIdleConn: 10
+      maxOpenConn: 10
+      connMaxLifetime: 1800000
+
+date-format: 2006-01-02
+date-time-format: 2006-01-02 15:04:05
+time-zone: Asia/Shanghai
+
+server:
+  port: 8090
+
+logging:
+  level: debug
+  file: logs/go-demand-service.log
