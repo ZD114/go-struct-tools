@@ -1,14 +1,13 @@
-package controller
+package converter
 
 import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"github.com/gin-gonic/gin"
 	"zhangda/go-tools/object"
 )
 
-func NewTable2Struct() *TableStruct {
+func NewTableStruct() *TableStruct {
 	return &TableStruct{}
 }
 
@@ -50,7 +49,7 @@ var typeForMysqlToGo = map[string]string{
 	"varbinary":          "string",
 }
 
-func (ts *TableStruct) Run(ctx *gin.Context) error {
+func (ts *TableStruct) Run() error {
 
 	if ts.config == nil {
 		ts.config = new(object.TableConfig)

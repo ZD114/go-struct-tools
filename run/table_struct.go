@@ -1,4 +1,4 @@
-package controller
+package converter
 
 import (
 	"database/sql"
