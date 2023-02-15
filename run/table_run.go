@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"log"
 	"zhangda/go-tools/object"
 )
 
@@ -106,6 +107,14 @@ func (ts *TableStruct) getColumns(table ...string) (tableColumns map[string][]ob
 
 	// sql排序
 	sqlStr += " order by TABLE_NAME asc, ORDINAL_POSITION asc"
+
+	rows, err := ts.db.Query(sqlStr)
+	if err != nil {
+		log.Println("Error reading table information: ", err.Error())
+		return
+	}
+
+	defer rows.Close()
 
 	return
 }
