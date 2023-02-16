@@ -7,6 +7,8 @@ import (
 	"zhangda/go-tools/log"
 	"zhangda/go-tools/router"
 	converter "zhangda/go-tools/run"
+
+	_ "github.com/go-sql-driver/mysql"
 )
 
 func main() {

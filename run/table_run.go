@@ -5,6 +5,8 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"os"
+	"os/exec"
 	"strings"
 	"zhangda/go-tools/object"
 )
@@ -58,22 +60,111 @@ func (ts *TableStruct) Run() error {
 	}
 
 	// 链接mysql, 获取db对象
-	ts.dialMysql()
+	ts.DialMysql()
 	if ts.err != nil {
 		return ts.err
 	}
 
 	// 获取表和字段的schema
-	_, err := ts.getColumns()
+	tableColumns, err := ts.GetColumns()
 	if err != nil {
 		return err
 	}
 
-	return nil
+	// 包名
+	var packageName string
+	if ts.packageName == "" {
+		packageName = "package repository\n\n"
+	} else {
+		packageName = fmt.Sprintf("package %s\n\n", ts.packageName)
+	}
 
+	// 组装struct
+	var structContent string
+	for tableRealName, item := range tableColumns {
+		// 去除前缀
+		if ts.prefix != "" {
+			tableRealName = tableRealName[len(ts.prefix):]
+		}
+
+		tableName := tableRealName
+		structName := tableName
+
+		if !ts.config.StructNameToHump {
+			structName = ts.CamelCase(structName, false)
+		}
+
+		switch len(tableName) {
+		case 0:
+		case 1:
+			tableName = strings.ToUpper(tableName[0:1])
+		default:
+			// 字符长度大于1时
+			tableName = strings.ToUpper(tableName[0:1]) + tableName[1:]
+		}
+
+		depth := 1
+		structContent += "type " + structName + " struct {\n"
+		for _, v := range item {
+			// 字段注释
+			var columnComment string
+			if v.ColumnComment != "" {
+				columnComment = fmt.Sprintf(" // %s", v.ColumnComment)
+			}
+			structContent += fmt.Sprintf("%s%s %s %s%s\n",
+				Tab(depth), v.ColumnName, v.Type, v.Tag, columnComment)
+
+		}
+		structContent += Tab(depth-1) + "}\n\n"
+
+		// 添加 method 获取真实表名
+		if ts.realNameMethod != "" {
+			structContent += fmt.Sprintf("func (%s) %s() string {\n",
+				structName, ts.realNameMethod)
+			structContent += fmt.Sprintf("%sreturn \"%s\"\n",
+				Tab(depth), tableRealName)
+			structContent += "}\n\n"
+		}
+	}
+
+	// 如果有引入 time.Time, 则需要引入 time 包
+	var importContent string
+	if strings.Contains(structContent, "time.Time") {
+		importContent = "import \"time\"\n\n"
+	}
+
+	// 写入文件struct
+	var savePath = ts.savePath
+
+	// 是否指定保存路径
+	if savePath == "" {
+		savePath = "table_repository.go"
+	}
+
+	filePath := fmt.Sprintf("%s", savePath)
+	f, err := os.Create(filePath)
+	if err != nil {
+		log.Println("Can not write file")
+		return err
+	}
+
+	defer f.Close()
+
+	f.WriteString(packageName + importContent + structContent)
+
+	cmd := exec.Command("gofmt", "-w", filePath)
+	cmd.Run()
+
+	log.Println("gen create repository finish!!!")
+
+	return nil
 }
 
-func (ts *TableStruct) dialMysql() {
+func Tab(depth int) string {
+	return strings.Repeat("\t", depth)
+}
+
+func (ts *TableStruct) DialMysql() {
 	if ts.db == nil {
 		if ts.dsn == "" {
 			ts.err = errors.New("dsn数据库配置缺失")
@@ -84,7 +175,7 @@ func (ts *TableStruct) dialMysql() {
 	return
 }
 
-func (ts *TableStruct) getColumns(table ...string) (tableColumns map[string][]object.Column, err error) {
+func (ts *TableStruct) GetColumns(table ...string) (tableColumns map[string][]object.Column, err error) {
 
 	// 根据设置,判断是否要把 date 相关字段替换为 string
 	if ts.dateToTime == false {
@@ -129,7 +220,7 @@ func (ts *TableStruct) getColumns(table ...string) (tableColumns map[string][]ob
 		}
 
 		col.Tag = col.ColumnName
-		col.ColumnName = ts.camelCase(col.ColumnName, false)
+		col.ColumnName = ts.CamelCase(col.ColumnName, false)
 		col.Type = typeForMysqlToGo[col.Type]
 		jsonTag := col.Tag
 
@@ -146,7 +237,7 @@ func (ts *TableStruct) getColumns(table ...string) (tableColumns map[string][]ob
 			}
 
 			if !ts.config.JsonTagToHump {
-				jsonTag = ts.camelCase(jsonTag, true)
+				jsonTag = ts.CamelCase(jsonTag, true)
 			}
 		}
 
@@ -181,7 +272,7 @@ func (ts *TableStruct) getColumns(table ...string) (tableColumns map[string][]ob
 	return tableColumns, nil
 }
 
-func (ts *TableStruct) camelCase(str string, flag bool) string {
+func (ts *TableStruct) CamelCase(str string, flag bool) string {
 	// 是否有表前缀, 设置了就先去除表前缀
 	if ts.prefix != "" {
 		str = strings.Replace(str, ts.prefix, "", 1)

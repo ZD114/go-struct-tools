@@ -1,4 +1,4 @@
-save-path: E:/GoFiles/go-struct-tools/repository/model.go
+save-path: E:/GoFiles/go-struct-tools/repository/table_repository.go
 mysql-url: root:root@tcp(127.0.0.1:3306)/go_test?charset=utf8
 enable-json-tag: true
 
