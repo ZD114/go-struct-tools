@@ -255,7 +255,13 @@ func (ts *TableStruct) GetColumns(table ...string) (tableColumns map[string][]ob
 				col.ColumnDefault = "''"
 			}
 
-			col.Tag = fmt.Sprintf("`%s:\"%s '%s' %s default(%s) comment('%s')\" json:\"%s\"`", ts.tagKey, col.ColumnType, col.Tag, col.Nullable, col.ColumnDefault, col.ColumnComment, jsonTag)
+			if col.ColumnType == "datetime" {
+				col.ColumnDefault = ""
+			} else {
+				col.ColumnDefault = "default(" + col.ColumnDefault + ")"
+			}
+
+			col.Tag = fmt.Sprintf("`%s:\"%s '%s' %s %s comment('%s')\" json:\"%s\"`", ts.tagKey, col.ColumnType, col.Tag, col.Nullable, col.ColumnDefault, col.ColumnComment, jsonTag)
 
 		} else {
 			col.Tag = fmt.Sprintf("`%s:\"%s\"`", ts.tagKey, col.Tag)
